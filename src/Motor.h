@@ -33,6 +33,7 @@ class Motor {
 		}
 
     void mover(int nPasos, int direccion) {
+			//Suponer que siempre el sensor comenzara en alto, debido a un estante
       //Intervalos
       const unsigned long intervalVel = 300;
       unsigned long previousMillis = 0;
@@ -40,7 +41,7 @@ class Motor {
       bool finish = false;
       bool estanteCerca = false;
       int valueSensor = analogRead(sensorPin);
-      int estantes = (valueSensor > 3600) ? -1 : 0;
+      int estantes = -1;
 
       while(!finish) {
 

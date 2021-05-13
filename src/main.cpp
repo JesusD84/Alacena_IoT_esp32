@@ -14,35 +14,37 @@ WiFiClient espClient;
 PubSubClient* client = new PubSubClient(espClient);
 Alacena* alacena = new Alacena();
 
+const int sensorUp = 34;
+const int sensorDown = 39;
+
 void recibirMensaje(char* topic, byte* payload, unsigned int length) {
 
   char accion = (char)payload[0];
-  char nPasos;
-  char direccion;
+  char firstArgument;
+  char secondArgument;
+  int auxConversion;
   char* respuesta;
 
   switch(accion) {
 	case '1':
-    nPasos = (char)payload[1];
-    direccion = (char)payload[2];
-    respuesta = (char*)"Recibido";
+    firstArgument = (char)payload[1];
+    secondArgument = (char)payload[2];
+    respuesta = (char*)"OK 1";
     mqtt->publicar(client, respuesta);
-    alacena->moverEstante(nPasos, direccion);
+    alacena->moverEstante(firstArgument, secondArgument);
 		break;
-	case '2':
-		alacena->listarProductos();
+  case '2':
+    firstArgument = (char)payload[1];
+    respuesta = (char*)"OK 2";
+    mqtt->publicar(client, respuesta);
+		alacena->encontrarProducto(firstArgument);
 		break;
   case '3':
-		alacena->encontrarProducto();
-		break;
-  case '4':
-		alacena->guardarProducto();
-		break;
-  case '5':
-		alacena->sacarProducto();
-		break;
+    firstArgument = (char)payload[1];
+    auxConversion = firstArgument - '0';
+    alacena->setPosicionActual(auxConversion);
 	default:
-    respuesta = (char*)"OK";
+    respuesta = (alacena->getPosicionActual() == 0) ? (char*)"0" : (char*)"OK 0";
     mqtt->publicar(client, respuesta);
 		break;
   }
@@ -53,13 +55,23 @@ void setup() {
   Serial.begin(115200);
   mqtt = new MQTTConnection(client, server, port, user, pass,
     topic_subscribe, topic_publish, recibirMensaje);
-    mqtt->conectar(client);
+  mqtt->conectar(client);
+  alacena->calibrar();
 }
 
 void loop() {
 
   if(!client->connected()) {
     mqtt->conectar(client);
+  }
+
+  int valueUp = analogRead(sensorUp);
+  int valueDown = analogRead(sensorDown);
+
+  if(valueUp > 2000) {
+    alacena->moverEstante('1', '0');
+  } else if(valueDown > 2000) {
+    alacena->moverEstante('1', '1');
   }
 
   client->loop();
